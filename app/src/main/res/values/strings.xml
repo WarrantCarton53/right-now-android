@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Right Now</string>
+    <string name="widget_name">Right Now</string>
+    <string name="widget_desc">What to do right now, what\'s next, and today\'s progress</string>
+</resources>

@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Right Now</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Right Now">
+<meta name="theme-color" content="#f2f4f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c1219" media="(prefers-color-scheme: dark)">
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-family:system-ui,sans-serif}
+img{max-width:100%}
+/* Layout: phone-first app shell — a single 520px column of screens (Now / Routine / Menu) with a fixed bottom tab bar and slide-up edit sheet. Block colors are user-chosen and carry meaning. */
+:root{
+  --bg:#f2f4f7; --surface:#ffffff; --fg:#131c28; --muted:#5a6676; --line:#dde2e9; --ink-on:#ffffff; --danger:#c8322b;
+  --c-teal:#0d8476; --c-gray:#6f7b8b; --c-blue:#3563d1; --c-orange:#c47610;
+  --c-purple:#7d45cf; --c-red:#d63d33; --c-green:#23914f; --c-indigo:#46518a; --c-pink:#bf3f78;
+  --f-display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Helvetica Neue", Arial, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1219; --surface:#151d27; --fg:#e9eef4; --muted:#95a2b2; --line:#253140; --ink-on:#0c1219; --danger:#f2695e;
+  --c-teal:#2db5a5; --c-gray:#9ba7b6; --c-blue:#6d96f2; --c-orange:#f0a446;
+  --c-purple:#a983f2; --c-red:#f2695e; --c-green:#4dc476; --c-indigo:#8f9ad0; --c-pink:#ee7eab;
+  color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0c1219; --surface:#151d27; --fg:#e9eef4; --muted:#95a2b2; --line:#253140; --ink-on:#0c1219; --danger:#f2695e;
+  --c-teal:#2db5a5; --c-gray:#9ba7b6; --c-blue:#6d96f2; --c-orange:#f0a446;
+  --c-purple:#a983f2; --c-red:#f2695e; --c-green:#4dc476; --c-indigo:#8f9ad0; --c-pink:#ee7eab;
+  color-scheme:dark }
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.wrap{max-width:520px;margin:0 auto;padding-block:20px 120px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  display:flex;flex-direction:column;gap:20px}
+header{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) auto;align-items:start;gap:10px}
+.date{font-family:var(--f-display);font-weight:700;font-size:1rem;line-height:1.25}
+.clock{font-family:var(--f-mono);font-weight:700;font-size:1.05rem;font-variant-numeric:tabular-nums}
+.sync{font-size:.78rem;font-weight:700;color:var(--muted)}
+.sync[data-st="error"]{color:var(--danger)}
+.hd-left{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hd-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.buddy{appearance:none;border:0;width:46px;height:46px;border-radius:50%;padding:0;cursor:pointer;background:var(--c-orange);display:grid;place-items:center;box-shadow:0 2px 0 color-mix(in srgb,var(--fg) 25%,transparent)}
+.buddy svg{width:34px;height:34px}
+.buddy:active{transform:translateY(1px)}
+.ovbar{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:14px;background:color-mix(in srgb,var(--c-orange) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--c-orange) 40%,var(--line));font-size:.9rem}
+.sheet.ai{height:min(78vh,640px);height:min(78dvh,640px);overflow:hidden;gap:10px}
+.sheet.ai .chat{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px}
+.sheet.ai .ask,.sheet.ai .aihead,.sheet.ai .undos{flex:none}
+.aihead{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.undos{display:flex;gap:8px;flex-wrap:wrap}
+.undos[hidden]{display:none}
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.chat{display:flex;flex-direction:column;gap:10px}
+.msg{max-width:88%;padding:10px 13px;border-radius:16px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.me{align-self:flex-end;background:var(--fg);color:var(--bg);border-bottom-right-radius:5px}
+.msg.ai{align-self:flex-start;background:var(--bg);border:1px solid var(--line);border-bottom-left-radius:5px}
+.msg.ai.err{color:var(--danger)}
+.prop{align-self:stretch;border:1.5px dashed var(--c-orange);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.prop .pl{display:grid;grid-template-columns:5.6rem 1fr;gap:2px 10px;font-size:.88rem}
+.prop .pl span:nth-child(odd){font-family:var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.ask{display:flex;gap:8px;align-items:flex-end}
+.ask textarea{min-height:46px;max-height:140px}
+.sugg{display:flex;gap:8px;flex-wrap:wrap}
+.prog{display:flex;flex-direction:column;gap:2px;min-width:0;padding-top:2px}
+.prog[hidden]{display:none}
+.prog-top{display:flex;align-items:baseline;gap:6px;white-space:nowrap;overflow:hidden}
+.prog-top b{font-family:var(--f-display);font-size:1rem;font-weight:800;font-variant-numeric:tabular-nums}
+.prog-top span{color:var(--muted);font-size:.75rem;overflow:hidden;text-overflow:ellipsis}
+.track-wrap{position:relative;height:56px}
+.track{position:absolute;left:0;right:0;bottom:14px;height:8px;display:flex;gap:2px}
+.tlab{position:absolute;bottom:0;font-family:var(--f-mono);font-size:.6rem;line-height:1;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.tlab.imp{color:var(--fg);font-weight:700}
+.track-wrap{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;cursor:pointer}
+.tip-pop{position:fixed;z-index:25;background:var(--fg);color:var(--bg);border-radius:10px;padding:7px 10px;font-size:.82rem;line-height:1.3;pointer-events:none;max-width:220px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.tip-pop b{display:block}
+.tip-pop span{font-family:var(--f-mono);font-size:.75rem;opacity:.85}
+.seg.peek{outline:2px solid var(--fg);outline-offset:1px}
+.seg{--cat:var(--c-gray);flex:1;border-radius:3px;background:var(--line);position:relative;min-width:0}
+.seg.done{background:var(--cat)}
+.seg.ash{background:repeating-linear-gradient(135deg,#6b6660 0 3px,#4a4642 3px 6px)}
+.seg.fire{background:#3a2a22}
+.seg .fx{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:15px;height:18px;pointer-events:none}
+.seg .flag{position:absolute;left:50%;top:-13px;transform:translateX(-50%);width:9px;height:12px}
+.seg .flag svg,.seg .fx svg{width:100%;height:100%;overflow:visible}
+.man{position:absolute;bottom:21px;width:22px;height:34px;transform:translateX(-50%);transition:left .6s ease}
+.man svg{width:100%;height:100%;overflow:visible}
+@keyframes legA{0%,100%{transform:rotate(22deg)}50%{transform:rotate(-22deg)}}
+@keyframes legB{0%,100%{transform:rotate(-22deg)}50%{transform:rotate(22deg)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
+@keyframes flick{0%,100%{transform:scale(1,1)}50%{transform:scale(.88,1.12)}}
+@keyframes spray{0%{opacity:0;transform:translate(0,0)}20%{opacity:1}100%{opacity:0;transform:translate(-26px,8px)}}
+@keyframes smoke{0%{opacity:.5;transform:translateY(0) scale(.6)}100%{opacity:0;transform:translateY(-14px) scale(1.2)}}
+@keyframes cheer{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.walk .lA{transform-origin:17px 34px;animation:legA .7s ease-in-out infinite}
+.walk .lB{transform-origin:17px 34px;animation:legB .7s ease-in-out infinite}
+.walk .aA{transform-origin:17px 20px;animation:legB .7s ease-in-out infinite}
+.walk .aB{transform-origin:17px 20px;animation:legA .7s ease-in-out infinite}
+.walk .body{animation:bob .35s ease-in-out infinite}
+@keyframes hammer{0%,100%{transform:rotate(-50deg)}50%{transform:rotate(25deg)}}
+@keyframes spark{0%,60%{opacity:0}70%{opacity:1}100%{opacity:0;transform:translateY(-4px)}}
+.build .ham{transform-origin:17px 21px;animation:hammer .5s ease-in-out infinite}
+.build .spk{animation:spark .5s linear infinite}
+.flame{transform-origin:13px 30px;animation:flick .5s ease-in-out infinite}
+.drop{animation:spray .6s linear infinite}
+.drop:nth-of-type(2){animation-delay:.2s}.drop:nth-of-type(3){animation-delay:.4s}
+.puff{animation:smoke 2.4s ease-out infinite}
+.cheer .body{animation:cheer .6s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.man{transition:none}.walk .lA,.walk .lB,.walk .aA,.walk .aB,.walk .body,.flame,.drop,.puff,.cheer .body,.build .ham,.build .spk{animation:none}}
+.sub{color:var(--muted);font-size:.85rem}
+h1.screen{margin:0;font-family:var(--f-display);font-weight:800;font-size:2rem;letter-spacing:-.01em}
+h2{font-family:var(--f-display);font-weight:700;font-size:1.1rem;margin:6px 4px 0}
+
+.now{--cat:var(--c-teal);background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:22px 20px;
+  display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
+.now::before{content:"";position:absolute;inset:0;background:var(--cat);opacity:.09;pointer-events:none}
+.label{font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;font-weight:700;color:var(--cat)}
+.now .big{margin:0;font-family:var(--f-display);font-weight:800;font-size:clamp(2.1rem,9vw,3rem);line-height:1.02;text-wrap:balance;letter-spacing:-.01em;overflow-wrap:anywhere}
+.range{font-family:var(--f-mono);font-size:.95rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar > i{display:block;height:100%;background:var(--cat);border-radius:99px;transition:width .4s}
+.left{font-family:var(--f-mono);font-weight:700;font-variant-numeric:tabular-nums}
+.tip{margin:0;font-size:1.05rem;max-width:60ch}
+.btn{appearance:none;border:0;border-radius:14px;padding:12px 18px;font-weight:700;background:var(--fg);color:var(--bg);cursor:pointer}
+.btn.cat{background:var(--cat);color:var(--ink-on)}
+.btn.ghost{background:transparent;color:var(--fg);box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn.danger{background:transparent;color:var(--danger);box-shadow:inset 0 0 0 1.5px var(--danger)}
+.btn[aria-pressed="true"]{background:transparent;color:var(--cat);box-shadow:inset 0 0 0 2px var(--cat)}
+.btn.small{padding:8px 12px;font-size:.9rem;border-radius:11px}
+.now .btn{align-self:flex-start}
+
+.next{display:flex;gap:12px;align-items:center;padding:0 4px}
+.next .k{font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700}
+.next .v{font-weight:700;min-width:0}
+.next .t{font-family:var(--f-mono);color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.list{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.row{--cat:var(--c-gray);display:grid;grid-template-columns:4.4rem 10px 1fr auto;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row .tm{font-family:var(--f-mono);font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.row .dot{width:10px;height:10px;border-radius:50%;background:var(--cat)}
+.row .nm{min-width:0;overflow-wrap:anywhere}
+.row.past .nm{color:var(--muted)}
+.row.current{background:color-mix(in srgb, var(--cat) 12%, transparent)}
+.row.current .nm{font-weight:700}
+.chk{appearance:none;width:28px;height:28px;border-radius:50%;border:2px solid var(--line);background:transparent;cursor:pointer;color:transparent;font-weight:700;padding:0;line-height:1}
+.chk[aria-pressed="true"]{background:var(--cat);border-color:var(--cat);color:var(--ink-on)}
+.row.editable{cursor:pointer;grid-template-columns:7.4rem 10px 1fr auto}
+.row .meta{color:var(--muted);font-size:.85rem;white-space:nowrap}
+.gap{padding:6px 14px;font-size:.8rem;color:var(--muted);border-top:1px dashed var(--line);font-family:var(--f-mono)}
+.empty{padding:22px 16px;color:var(--muted);text-align:center}
+
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{appearance:none;border:0;border-radius:99px;padding:8px 14px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line);cursor:pointer;font-weight:700;font-size:.9rem}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);box-shadow:none}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{appearance:none;border:0;border-radius:12px;padding:10px 0;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line);cursor:pointer;font-weight:700}
+.day[aria-pressed="true"]{background:var(--fg);color:var(--bg);box-shadow:none}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field > span{font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+input[type=text],input[type=time],textarea,select{background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;width:100%;box-sizing:border-box;min-width:0}
+textarea{resize:vertical;min-height:70px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.sw{appearance:none;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;background:var(--cat)}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--cat)}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.toggle input{width:22px;height:22px;accent-color:var(--fg)}
+.note{color:var(--muted);font-size:.88rem;margin:0;max-width:60ch}
+.err{color:var(--danger);font-size:.9rem;margin:0}
+
+.menu-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 16px;border-top:1px solid var(--line)}
+.menu-row:first-child{border-top:0}
+.menu-row .v{color:var(--muted);text-align:right;min-width:0;overflow-wrap:anywhere}
+.avatar{width:44px;height:44px;border-radius:50%;background:var(--c-teal);color:var(--ink-on);display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:1.2rem;flex:none}
+.acct{display:flex;gap:14px;align-items:center;padding:16px}
+.acct b{display:block}
+.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);z-index:20;
+  padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.tabs .in{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.tab{appearance:none;border:0;background:transparent;padding:10px 0 12px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:var(--muted);font-size:.78rem;font-weight:700}
+.tab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tab[aria-selected="true"]{color:var(--fg)}
+
+.scrim{position:fixed;inset:0;background:rgba(5,10,16,.45);z-index:30;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:520px;max-height:88vh;overflow:auto;border-radius:22px 22px 0 0;box-sizing:border-box;
+  padding:20px max(16px, env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px));
+  display:flex;flex-direction:column;gap:14px}
+.sheet h3{margin:0;font-family:var(--f-display);font-size:1.4rem}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:700;z-index:40;font-size:.9rem}
+@media (prefers-reduced-motion: reduce){.bar > i{transition:none}}
+</style>
+
+</head>
+<body>
+<main class="wrap">
+  <!-- NOW -->
+  <section id="v-now">
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <header>
+        <div class="hd-left">
+          <span class="date" id="date">Today</span>
+          <span class="sub" id="daytype"></span>
+          <span class="sync" id="sync" data-st="loading">Loading…</span>
+        </div>
+        <section class="prog" id="prog" aria-label="Today's progress">
+          <div class="prog-top"><b id="progPct">0%</b><span id="progTxt"></span></div>
+          <div class="track-wrap" id="trackWrap"></div>
+        </section>
+        <div class="hd-right">
+          <span class="clock" id="clock">--:--</span>
+        </div>
+      </header>
+      <section class="now" id="now" aria-live="polite">
+        <span class="label" id="nowLabel">Right now</span>
+        <p class="big" id="nowName">Loading your routine</p>
+        <span class="range" id="nowRange"></span>
+        <div class="bar" id="barWrap"><i id="bar" style="width:0%"></i></div>
+        <span class="left" id="nowLeft"></span>
+        <p class="tip" id="nowTip"></p>
+        <button class="btn cat" id="doneBtn" type="button" aria-pressed="false">Mark done</button>
+      </section>
+      <div class="next" id="next">
+        <span class="k">Next</span><span class="v" id="nextName"></span><span class="t" id="nextTime"></span>
+      </div>
+      <h2>Today</h2>
+      <div class="list" id="todayList"></div>
+    </div>
+  </section>
+
+  <!-- ROUTINE -->
+  <section id="v-routine" hidden>
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <h1 class="screen">Your routine</h1>
+      <p class="note">Make a schedule for each kind of day, pick which days use it, then add your blocks. Gaps between blocks show as open time. The time after your last block until your first one is sleep.</p>
+      <div class="chips" id="schedChips"></div>
+      <div class="panel">
+        <label class="field"><span>Schedule name</span><input type="text" id="schedName" maxlength="40"></label>
+        <div class="field"><span>Used on</span><div class="days" id="schedDays"></div></div>
+        <p class="note" id="dayNote"></p>
+        <div class="actions">
+          <button class="btn small ghost" type="button" id="dupSched">Duplicate</button>
+          <button class="btn small danger" type="button" id="delSched">Delete schedule</button>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <h2 style="margin:0">Blocks</h2>
+        <button class="btn small" type="button" id="addBlock">+ Add block</button>
+      </div>
+      <div class="list" id="blockList"></div>
+      <button class="btn ghost" type="button" id="addSched">+ New schedule</button>
+    </div>
+  </section>
+
+  <!-- MENU -->
+  <section id="v-menu" hidden>
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <h1 class="screen">Menu</h1>
+
+      <h2>Offline edition</h2>
+      <div class="list">
+        <div class="acct"><div class="avatar" id="avatar">?</div><div><b id="acctName">Right Now</b><span class="note" id="acctSync">Everything is saved on this phone. It works with no internet.</span></div></div>
+      </div>
+
+      <h2>Settings</h2>
+      <div class="panel">
+        <label class="field"><span>Your name</span><input type="text" id="setName" maxlength="30" placeholder="Shown in the greeting"></label>
+        <label class="field"><span>Time format</span>
+          <select id="setClock"><option value="12">12-hour (3:40 PM)</option><option value="24">24-hour (15:40)</option></select></label>
+        <label class="field"><span>Appearance</span>
+          <select id="setTheme"><option value="system">Match my phone</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+        <label class="toggle"><span>Show tips under each block</span><input type="checkbox" id="setTips"></label>
+      </div>
+
+      <h2>Notifications</h2>
+      <div class="panel">
+        <p class="note">iPhone only lets App Store apps send alerts, so your alerts come from the Calendar app. Turn on “Alert” for any block you want a notification for.</p>
+        <button class="btn small" type="button" id="icsBtn" style="align-self:flex-start">Make calendar file</button>
+        <ol class="steps note">
+          <li>Tap <b>Make calendar file</b>, then open it and tap <b>Add All</b>.</li>
+          <li>When you change your routine, delete the old Routine events in Calendar first, then make a new file.</li>
+          <li>Add the Calendar “Up Next” widget to your home screen.</li>
+        </ol>
+        <p class="note" id="alertCount"></p>
+      </div>
+
+      <h2>Your data</h2>
+      <div class="panel">
+        <p class="note">Your routine lives on this device only. Save a backup now and then, and use it to move your routine to another phone or tablet.</p>
+        <div class="actions">
+          <button class="btn small ghost" type="button" id="backupBtn">Save a backup</button>
+          <label class="btn small ghost" for="importFile" style="display:inline-block">Load a backup</label>
+          <input type="file" id="importFile" accept=".json,application/json" hidden>
+          <button class="btn small danger" type="button" id="resetBtn">Reset to my routine</button>
+        </div>
+        <p class="note" id="dataNote"></p>
+      </div>
+
+      <h2>About</h2>
+      <div class="list">
+        <div class="menu-row"><span>App</span><span class="v">Right Now</span></div>
+        <div class="menu-row"><span>Version</span><span class="v">1.3 Android</span></div>
+        <div class="menu-row"><span>What it does</span><span class="v">Tells you what to do right now</span></div>
+        <div class="menu-row"><span>Install</span><span class="v">Safari → Share → Add to Home Screen</span></div>
+        <div class="menu-row"><span>Built with</span><span class="v">Claude, for David</span></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs" aria-label="Sections"><div class="in" role="tablist">
+  <button class="tab" role="tab" data-v="now" aria-selected="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Now</button>
+  <button class="tab" role="tab" data-v="routine" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Routine</button>
+  <button class="tab" role="tab" data-v="menu" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>Menu</button>
+</div></nav>
+
+<div class="scrim" id="scrim" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h3 id="sheetTitle">Edit block</h3>
+    <label class="field"><span>Name</span><input type="text" id="bName" maxlength="40"></label>
+    <div class="two">
+      <label class="field"><span>Starts</span><input type="time" id="bStart"></label>
+      <label class="field"><span>Ends</span><input type="time" id="bEnd"></label>
+    </div>
+    <div class="field"><span>Color</span><div class="swatches" id="bColors"></div></div>
+    <label class="field"><span>What to do (tip)</span><textarea id="bTip" maxlength="240"></textarea></label>
+    <label class="toggle"><span>Alert me when it starts</span><input type="checkbox" id="bAlert"></label>
+    <label class="toggle"><span>Show a “done” checkmark</span><input type="checkbox" id="bCheck"></label>
+    <label class="toggle"><span>Important (a milestone on your progress bar, must get done)</span><input type="checkbox" id="bImp"></label>
+    <p class="err" id="bErr" hidden></p>
+    <div class="actions">
+      <button class="btn" type="button" id="bSave">Save</button>
+      <button class="btn ghost" type="button" id="bCancel">Cancel</button>
+      <button class="btn danger" type="button" id="bDelete" style="margin-left:auto">Delete</button>
+    </div>
+  </div>
+</div>
+<div class="tip-pop" id="tipPop" hidden role="status"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const COLORS=["teal","gray","blue","orange","purple","red","green","indigo","pink"];
+const DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const DAY1=["S","M","T","W","T","F","S"];
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+let uidN=0; const uid=()=>Date.now().toString(36)+(uidN++).toString(36)+Math.random().toString(36).slice(2,6);
+
+// Starter routine (used for "Reset" and before your saved routine loads)
+const MINE={"v": 1, "settings": {"name": "David", "clock": "12", "theme": "light", "tips": true}, "schedules": [{"id": "mvyap4mu1jpbzk", "name": "School Days", "days": [1, 4, 5], "blocks": [{"id": "mvyap4mu1ksjl0", "name": "Wake up & get ready", "start": "05:50", "end": "06:25", "color": "teal", "tip": "Get up, brush teeth, contact, change, go eat, hair, leave.", "alert": false, "check": true, "important": false}, {"id": "mvyap4mu1lr21u", "name": "Drive to school", "start": "06:25", "end": "07:20", "color": "gray", "tip": "Be out the door by 6:30.", "alert": true, "check": false, "important": false}, {"id": "mvyap4mu1mnz50", "name": "School", "start": "07:20", "end": "14:20", "color": "blue", "tip": "Pay attention now and studying later goes faster.", "alert": false, "check": false, "important": false}, {"id": "mvyap4mu1nura1", "name": "After school", "start": "14:20", "end": "14:40", "color": "pink", "tip": "Chill with friends, if something out of schedule must be done. SKIP!", "alert": false, "check": false, "important": false}, {"id": "mvyap4mu1oxws5", "name": "Drive home", "start": "14:40", "end": "15:20", "color": "gray", "tip": "Drive safe. Messages can wait.", "alert": false, "check": false, "important": false}, {"id": "mvyap4mu1pf3dp", "name": "Change & Text", "start": "15:20", "end": "15:40", "color": "blue", "tip": "Change clothes, bag where you study, text until called down to eat. (If eat time, go down)", "alert": false, "check": true, "important": false}, {"id": "mvyap4mu1qut5s", "name": "Eat", "start": "15:40", "end": "15:55", "color": "orange", "tip": "Real food, not just snacks. This is fuel for your workout.", "alert": true, "check": false, "important": false}, {"id": "mvyap4mu1rgde3", "name": "Homework / Study", "start": "16:00", "end": "16:40", "color": "purple", "tip": "Homework first, whatever's due soonest. Finished? Review notes or get ahead. PHONE IN ANOTHER ROOM.", "alert": true, "check": true, "important": true}, {"id": "mvyap4mu1wrje5", "name": "Shower", "start": "19:30", "end": "20:00", "color": "purple", "tip": "Shower.", "alert": true, "check": true, "important": true}, {"id": "mvyhcmehdzem7", "name": "Check Messages", "start": "15:55", "end": "16:00", "color": "teal", "tip": "Reply to messages. Only!", "alert": false, "check": true, "important": false}, {"id": "mvyhenj3egw36", "name": "Pre-GYM", "start": "16:40", "end": "17:00", "color": "teal", "tip": "Get ready for gym. Text. NO SCROLL.", "alert": true, "check": true, "important": false}, {"id": "mvyhg0s2fq67a", "name": "GYM", "start": "17:00", "end": "19:00", "color": "red", "tip": "Try to get a nice workout done. Put phone away where only logs can be input.", "alert": true, "check": true, "important": true}, {"id": "mvyhjz0egwxyo", "name": "Dinner", "start": "19:00", "end": "19:30", "color": "purple", "tip": "Make it yourself. If not ready yet. Learn some cooks!", "alert": false, "check": true, "important": true}, {"id": "mvyhnep7hpm1t", "name": "Brush / Skincare", "start": "20:00", "end": "20:30", "color": "purple", "tip": "Floss, brush teeth, scrape, flush. Skin care.", "alert": true, "check": true, "important": true}, {"id": "mvyhqpesigh55", "name": "Free time / Sleep", "start": "20:30", "end": "21:40", "color": "teal", "tip": "You earned the free time, game, scroll, text, call, watch a movie. By 9:40 should be sleeping.", "alert": true, "check": true, "important": false}]}, {"id": "mvyhtf7wjcdxk", "name": "Club Days", "days": [], "blocks": [{"id": "mvyhtf7xkpi4r", "name": "Wake up & get ready", "start": "05:50", "end": "06:25", "color": "teal", "tip": "Get up, brush teeth, contact, change, go eat, hair, leave.", "alert": false, "check": false, "important": false}, {"id": "mvyhtf7xln83z", "name": "Drive to school", "start": "06:25", "end": "07:20", "color": "gray", "tip": "Be out the door by 6:30.", "alert": true, "check": false, "important": false}, {"id": "mvyhtf7xmvmlk", "name": "School", "start": "07:20", "end": "14:20", "color": "blue", "tip": "Pay attention now and studying later goes faster.", "alert": false, "check": false, "important": false}, {"id": "mvyhtf7xn83zj", "name": "Club & then go home", "start": "14:20", "end": "15:40", "color": "pink", "tip": "Chess, Vex, tutoring, any activities, then go home.", "alert": false, "check": false, "important": false}, {"id": "mvyhtf7xrf4lt", "name": "Homework / Study", "start": "17:10", "end": "17:50", "color": "purple", "tip": "Homework first, whatever's due soonest. Finished? Review notes or get ahead. PHONE IN ANOTHER ROOM.", "alert": true, "check": true, "important": true}, {"id": "mvyhtf7xssrtr", "name": "Shower", "start": "19:30", "end": "20:00", "color": "purple", "tip": "Shower.", "alert": true, "check": true, "important": true}, {"id": "mvyhtf7xvnvoe", "name": "GYM", "start": "18:10", "end": "19:10", "color": "red", "tip": "Try to get a nice workout done. Put phone away where only logs can be input.", "alert": true, "check": true, "important": true}, {"id": "mvyhtf7xwmofy", "name": "Dinner", "start": "19:10", "end": "19:30", "color": "purple", "tip": "Make it yourself. If not ready yet. Learn some cooks!", "alert": false, "check": true, "important": false}, {"id": "mvyhtf7xxpkka", "name": "Brush / Skincare", "start": "20:00", "end": "20:30", "color": "purple", "tip": "Floss, brush teeth, scrape, flush. Skin care.", "alert": true, "check": true, "important": true}, {"id": "mvyhtf7xy64j5", "name": "Free time / Sleep", "start": "20:30", "end": "21:40", "color": "teal", "tip": "You earned the free time, game, scroll, text, call, watch a movie. By 9:40 should be sleeping.", "alert": true, "check": false, "important": false}, {"id": "mvyi52k9zwo1m", "name": "Drive Home", "start": "15:40", "end": "16:15", "color": "gray", "tip": "Just get home ALR Bruh.", "alert": false, "check": false, "important": false}, {"id": "mvyi5yso10hdmo", "name": "Change", "start": "16:15", "end": "16:30", "color": "orange", "tip": "Change and get ready to eat we are behind.", "alert": false, "check": false, "important": false}, {"id": "mvyiu27m11nyh0", "name": "Eat", "start": "16:30", "end": "16:55", "color": "teal", "tip": "Eat and lock in we're late.", "alert": false, "check": true, "important": true}, {"id": "mvyiv1r91256eq", "name": "Text", "start": "16:55", "end": "17:10", "color": "red", "tip": "15 minute to get text. Huzz.", "alert": false, "check": false, "important": false}, {"id": "mvyl3cx214bjqg", "name": "Pre-GYM", "start": "17:50", "end": "18:10", "color": "blue", "tip": "Get thing ready for the GYM. Text if done, No Scrolling!!", "alert": false, "check": true, "important": false}]}, {"id": "mw09adlp0qpfx", "name": "Lacrosse Days", "days": [], "blocks": [{"id": "mw09adlp1dlty", "name": "Wake up & get ready", "start": "05:50", "end": "06:25", "color": "teal", "tip": "Get up, brush teeth, contact, change, go eat, hair, leave.", "alert": false, "check": false, "important": false}, {"id": "mw09adlp23740", "name": "Drive to school", "start": "06:25", "end": "07:20", "color": "gray", "tip": "Be out the door by 6:30.", "alert": true, "check": false, "important": false}, {"id": "mw09adlp3ruju", "name": "School", "start": "07:20", "end": "14:20", "color": "blue", "tip": "Pay attention now and studying later goes faster.", "alert": false, "check": false, "important": false}, {"id": "mw09adlp4m6no", "name": "Lacrosse", "start": "14:20", "end": "17:00", "color": "pink", "tip": "Chill with friends, if something out of schedule must be done. SKIP!", "alert": false, "check": true, "important": true}, {"id": "mw09adlp5zbyp", "name": "Drive home", "start": "17:00", "end": "17:30", "color": "gray", "tip": "Drive safe. Messages can wait.", "alert": false, "check": false, "important": false}, {"id": "mw09adlp8q1i3", "name": "Homework / Study", "start": "17:30", "end": "18:20", "color": "purple", "tip": "Homework first, whatever's due soonest. Finished? Review notes or get ahead. PHONE IN ANOTHER ROOM.", "alert": true, "check": true, "important": true}, {"id": "mw09adlp9vaov", "name": "Shower", "start": "20:00", "end": "20:30", "color": "purple", "tip": "Shower.", "alert": true, "check": true, "important": true}, {"id": "mw09adlpblblm", "name": "Pre-GYM", "start": "18:20", "end": "18:40", "color": "teal", "tip": "Get ready for gym. Text. NO SCROLL.", "alert": true, "check": true, "important": false}, {"id": "mw09adlpc7lyv", "name": "GYM-light", "start": "18:40", "end": "19:20", "color": "red", "tip": "Try to get a nice workout done. Put phone away where only logs can be input.", "alert": true, "check": true, "important": true}, {"id": "mw09adlpdjmij", "name": "Dinner", "start": "19:30", "end": "20:00", "color": "purple", "tip": "Make it yourself. If not ready yet. Learn some cooks!", "alert": false, "check": false, "important": true}, {"id": "mw09adlpefnyq", "name": "Brush / Skincare", "start": "20:30", "end": "21:00", "color": "purple", "tip": "Floss, brush teeth, scrape, flush. Skin care.", "alert": true, "check": false, "important": true}, {"id": "mw09adlpfcxnz", "name": "Free time / Sleep", "start": "21:00", "end": "21:40", "color": "teal", "tip": "You earned the free time, game, scroll, text, call, watch a movie. By 9:40 should be sleeping.", "alert": true, "check": false, "important": false}]}, {"id": "mw09h7xqgbibq", "name": "Saturdays", "days": [6, 2], "blocks": [{"id": "mw09jhx1hnwdd", "name": "Wake up & get ready", "start": "10:30", "end": "11:00", "color": "purple", "tip": "Wake up chud, brush teeth, contacts, do bed.", "alert": false, "check": false, "important": false}, {"id": "mw09kox7ioz6l", "name": "Clean room", "start": "11:00", "end": "11:15", "color": "teal", "tip": "Do your best to clean the room to the best of the abilities.", "alert": true, "check": false, "important": false}, {"id": "mw09lwvdjkr5k", "name": "Breakfast", "start": "11:15", "end": "12:10", "color": "teal", "tip": "Go eat breakfast of not done yet go downstairs and make it lazy bum.", "alert": false, "check": false, "important": false}, {"id": "mw09rzy1kunr5", "name": "Study/Homework/Review", "start": "12:10", "end": "13:00", "color": "red", "tip": "Do this get it out of the way and the rest of the day is yours.", "alert": true, "check": true, "important": true}, {"id": "mw09tlt9mr0r3", "name": "Free Time", "start": "13:00", "end": "14:00", "color": "blue", "tip": "You can do anything, try not to scroll, game, watch something, conversate.", "alert": false, "check": false, "important": false}, {"id": "mw09uv57nkplo", "name": "Work out", "start": "14:00", "end": "15:30", "color": "purple", "tip": "Keep it light we got work ahead", "alert": true, "check": true, "important": true}, {"id": "mw09vapiomis2", "name": "EAT", "start": "15:45", "end": "16:30", "color": "blue", "tip": "Eat real food before we go work.", "alert": true, "check": true, "important": false}, {"id": "mw09w2zlpwpw0", "name": "Work", "start": "16:30", "end": "18:00", "color": "green", "tip": "Work try getting Wuiro and work less", "alert": true, "check": true, "important": true}, {"id": "mw09yew3qegzs", "name": "Rest", "start": "15:30", "end": "15:45", "color": "orange", "tip": "Just worked out chill for a bit", "alert": false, "check": false, "important": false}, {"id": "mw09zmv5st4wg", "name": "Get Home", "start": "18:00", "end": "18:30", "color": "gray", "tip": "Get home after working and settle in", "alert": true, "check": false, "important": false}, {"id": "mw0a0rditpk1i", "name": "Shower", "start": "18:30", "end": "19:15", "color": "purple", "tip": "Take a shower and get in pijamas.", "alert": true, "check": true, "important": true}, {"id": "mw0a1iegu2yfu", "name": "Dinner", "start": "19:15", "end": "19:50", "color": "blue", "tip": "If dinner is not ready yet you make it faggy.", "alert": true, "check": true, "important": true}, {"id": "mw0a2fjov9xpm", "name": "Skincare", "start": "19:50", "end": "20:20", "color": "green", "tip": "Shave and use exfoliating soap. Saturday", "alert": true, "check": true, "important": true}, {"id": "mw0a3hlyw6jsf", "name": "Free Night", "start": "20:20", "end": "23:00", "color": "red", "tip": "Free time nothing left to do. Game. Call. Sleep. Watch a show.", "alert": false, "check": false, "important": false}]}, {"id": "mw0a3zm5xmlgu", "name": "Sundays", "days": [0], "blocks": [{"id": "mw0a3zm5y2tbw", "name": "Wake up & get ready", "start": "10:30", "end": "11:00", "color": "purple", "tip": "Wake up chud, brush teeth, contacts, do bed.", "alert": false, "check": false, "important": false}, {"id": "mw0a3zm5z09cs", "name": "Clean room", "start": "11:00", "end": "11:15", "color": "teal", "tip": "Do your best to clean the room to the best of the abilities.", "alert": false, "check": true, "important": false}, {"id": "mw0a3zm51048pc", "name": "Breakfast", "start": "11:15", "end": "11:35", "color": "teal", "tip": "Go eat breakfast of not done yet go downstairs and make it lazy bum.", "alert": false, "check": false, "important": false}, {"id": "mw0a3zm611lns5", "name": "Study/Homework/Review", "start": "15:30", "end": "16:00", "color": "red", "tip": "Do this get it out of the way and the rest of the day is yours.", "alert": true, "check": true, "important": true}, {"id": "mw0a3zm612pt58", "name": "Church", "start": "11:35", "end": "15:30", "color": "purple", "tip": "Time that we are out in church, and or maybe not certain eating somewhere", "alert": true, "check": true, "important": true}, {"id": "mw0a3zm6155n2r", "name": "Work", "start": "16:30", "end": "18:00", "color": "blue", "tip": "Work try getting Wuiro and work less", "alert": true, "check": true, "important": true}, {"id": "mw0a3zm617t6fm", "name": "Get Home", "start": "18:00", "end": "18:30", "color": "gray", "tip": "Get home after working and settle in", "alert": false, "check": false, "important": false}, {"id": "mw0a3zm618jut2", "name": "Shower", "start": "18:30", "end": "19:15", "color": "purple", "tip": "Take a shower and get in pijamas.", "alert": true, "check": true, "important": true}, {"id": "mw0a3zm619acii", "name": "Dinner", "start": "19:15", "end": "19:50", "color": "blue", "tip": "If dinner is not ready yet you make it faggy.", "alert": true, "check": true, "important": false}, {"id": "mw0a3zm61a8mfz", "name": "Skincare", "start": "19:50", "end": "20:20", "color": "green", "tip": "Shave and use exfoliating soap. Saturday", "alert": false, "check": true, "important": true}, {"id": "mw0a3zm61b7hw9", "name": "Sleep/Free", "start": "20:20", "end": "21:40", "color": "red", "tip": "Go to sleep before 9:40.", "alert": false, "check": false, "important": false}, {"id": "mw0a7vza1c6rls", "name": "Rest", "start": "16:00", "end": "16:30", "color": "green", "tip": "Rest before working", "alert": false, "check": false, "important": false}]}, {"id": "mw0ad13c1dxrur", "name": "SAT Wednesdays", "days": [3], "blocks": [{"id": "mw0ad13c1ercg4", "name": "Wake up & get ready", "start": "05:50", "end": "06:25", "color": "teal", "tip": "Get up, brush teeth, contact, change, go eat, hair, leave.", "alert": false, "check": false, "important": false}, {"id": "mw0ad13c1fuu2h", "name": "Drive to school", "start": "06:25", "end": "07:20", "color": "gray", "tip": "Be out the door by 6:30.", "alert": true, "check": false, "important": false}, {"id": "mw0ad13c1g7eex", "name": "School", "start": "07:20", "end": "14:20", "color": "blue", "tip": "Pay attention now and studying later goes faster.", "alert": false, "check": false, "important": false}, {"id": "mw0ad13c1hvjuu", "name": "After school", "start": "14:20", "end": "14:40", "color": "pink", "tip": "Chill with friends, if something out of schedule must be done. SKIP!", "alert": false, "check": false, "important": false}, {"id": "mw0ad13c1i67tx", "name": "Drive home", "start": "14:40", "end": "15:20", "color": "gray", "tip": "Drive safe. Messages can wait.", "alert": false, "check": false, "important": false}, {"id": "mw0ad13c1jesuc", "name": "Change & Text", "start": "15:20", "end": "15:40", "color": "blue", "tip": "Change clothes, bag where you study, text until called down to eat. (If eat time, go down)", "alert": false, "check": false, "important": false}, {"id": "mw0ad13c1kpvay", "name": "Eat", "start": "15:40", "end": "15:55", "color": "orange", "tip": "Real food, not just snacks. This is fuel for your workout.", "alert": true, "check": true, "important": false}, {"id": "mw0ad13c1l29e0", "name": "Homework / Study", "start": "16:00", "end": "16:40", "color": "purple", "tip": "Homework first, whatever's due soonest. Finished? Review notes or get ahead. PHONE IN ANOTHER ROOM.", "alert": true, "check": true, "important": true}, {"id": "mw0ad13c1mx1qo", "name": "Shower", "start": "17:50", "end": "18:30", "color": "orange", "tip": "Shower.", "alert": true, "check": true, "important": true}, {"id": "mw0ad13c1n2asu", "name": "Check Messages", "start": "15:55", "end": "16:00", "color": "teal", "tip": "Reply to messages. Only!", "alert": false, "check": false, "important": false}, {"id": "mw0ad13c1op06m", "name": "Pre-GYM", "start": "16:40", "end": "16:50", "color": "teal", "tip": "Get ready for gym. Text. NO SCROLL.", "alert": true, "check": false, "important": false}, {"id": "mw0ad13c1pp6g7", "name": "GYM", "start": "16:50", "end": "17:50", "color": "red", "tip": "Try to get a nice workout done. Put phone away where only logs can be input.", "alert": true, "check": true, "important": true}, {"id": "mw0ad13c1qfj6t", "name": "SAT tutoring", "start": "19:00", "end": "20:15", "color": "purple", "tip": "LOCK", "alert": true, "check": true, "important": true}, {"id": "mw0ad13c1r72yr", "name": "Brush / Skincare", "start": "21:25", "end": "21:30", "color": "purple", "tip": "Floss, brush teeth, scrape, flush. Skin care.", "alert": true, "check": true, "important": true}, {"id": "mw0ad13c1s3me1", "name": "Free time / Sleep", "start": "21:30", "end": "21:40", "color": "teal", "tip": "You earned the free time, game, scroll, text, call, watch a movie. By 9:40 should be sleeping.", "alert": true, "check": false, "important": false}, {"id": "mw0ai3jo1thnvo", "name": "Prepare for class", "start": "18:30", "end": "19:00", "color": "gray", "tip": "Just sit in from of the computer, do research, make a ROBLOX game, improve the app. But join the class on time", "alert": true, "check": true, "important": false}, {"id": "mw0akie41uxyrx", "name": "Shower/Dinner", "start": "20:15", "end": "21:25", "color": "teal", "tip": "Doesn's matter how just get it done, on hour and 10 to shower and eat", "alert": true, "check": true, "important": true}]}], "updated": 0};
+function starter(){ return JSON.parse(JSON.stringify(MINE)); }
+function starterOld(){
+  const T={study:"Homework first, whatever's due soonest. Finished? Review notes or get ahead. Phone in another room.",
+    workout:"Warm up 5 minutes, keep water nearby. Tired? Do a lighter session instead of skipping.",
+    eat:"Real food, not just snacks. This is fuel for your workout.",
+    free:"Guilt-free time. Text friends, game, scroll. You earned it.",
+    shower:"Shower and skincare, then you're basically done for the day.",
+    wind:"Phone on the charger, away from your bed. Lights out at 10.",
+    dinner:"Eat away from the screen if you can."};
+  const b=(start,end,name,color,tip,alert,check=true)=>({id:uid(),name,start,end,color,tip:tip||"",alert:!!alert,check});
+  const evening=()=>[b("19:00","19:30","Dinner","orange",T.dinner,true),b("19:30","21:00","Free time","green",T.free,false,false),
+    b("21:00","21:20","Shower & skincare","teal",T.shower,true),b("21:20","22:00","Wind down","indigo",T.wind,true)];
+  const school=tue=>{const x=tue?["15:30","16:10","16:25","16:40","17:20","18:20"]:["14:40","15:20","15:40","15:55","16:35","17:35"];
+    return [b("05:50","06:35","Wake up & get ready","teal","Get up, drink water, get dressed, eat something small."),
+      b("06:35","07:05","Drive to school","gray","Be out the door by 6:35. Phone on Driving Focus.",true),
+      b("07:05",tue?"15:30":"14:20",tue?"School (staying late)":"School","blue","Pay attention now and studying later goes faster.",false,false),
+      ...(tue?[]:[b("14:20","14:40","After school","blue","Grab what you need, then head out.",false,false)]),
+      b(x[0],x[1],"Drive home","gray","Drive safe. Messages can wait.",false,false),
+      b(x[1],x[2],"Change & settle in","teal","Change clothes, bag where you study, phone on the charger."),
+      b(x[2],x[3],"Eat","orange",T.eat,true),b(x[3],x[4],"Homework, then study","purple",T.study,true),
+      b(x[4],x[5],"Workout","red",T.workout,true),b(x[5],"19:00","Free time","green",T.free,true,false),...evening()];};
+  return {v:1,settings:{name:"",clock:"12",theme:"system",tips:true},schedules:[
+    {id:uid(),name:"School days",days:[1,3,4,5],blocks:school(false)},
+    {id:uid(),name:"Tuesday",days:[2],blocks:school(true)},
+    {id:uid(),name:"Saturday",days:[6],blocks:[b("08:30","09:00","Wake up","teal","Up by 8:30 so Monday at 5:50 doesn't hurt."),
+      b("09:00","09:30","Breakfast","orange",T.eat),b("09:30","10:30","Workout","red",T.workout,true),
+      b("10:45","13:45","Work","pink","Your job is flexible. Mornings free up the rest of the day.",true),
+      b("13:45","14:30","Lunch","orange",""),b("14:30","15:10","Homework, then study","purple",T.study,true),
+      b("15:10","19:00","Free time","green",T.free,false,false),...evening()]},
+    {id:uid(),name:"Sunday",days:[0],blocks:[b("08:30","09:00","Wake up","teal",""),b("09:00","09:30","Breakfast","orange",T.eat),
+      b("09:30","10:30","Light workout or rest","red","Go light (walk, stretch) or rest if you trained hard all week."),
+      b("11:15","12:00","Get ready for church","teal","Get dressed and head out with time to spare.",true),
+      b("12:00","13:30","Church","blue","Phone away.",false,false),b("13:30","14:30","Lunch","orange",""),
+      b("14:30","16:30","Work","pink","Move this if you need to.",true),
+      b("16:30","17:10","Plan the week + study","purple","Check what's due this week and break big assignments into small pieces.",true),
+      b("17:10","19:00","Free time","green",T.free,false,false),...evening()]}
+  ]};
+}
+
+let S=null; // state
+const LS="rn-offline-routine-v1";
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function valid(x){return x&&Array.isArray(x.schedules)&&x.settings}
+const AND=window.Android||null;
+function phoneState(){try{const p=JSON.parse(AND.getState()||"null");return valid(p)?p:null}catch(e){return null}}
+if(AND) S=phoneState();
+if(!S){try{const raw=lsGet(LS); if(raw){const p=JSON.parse(raw); if(valid(p)) S=p;}}catch(e){}}
+if(!S) S=starter();
+if(AND && !phoneState()){try{AND.saveState(JSON.stringify(S))}catch(e){}}
+
+// ---- saving (this device only) ----
+let db=null, cloud="local";
+if(typeof S.updated!=="number") S.updated=0;
+function setStatus(st){cloud=st;const el=document.getElementById("sync");if(el){el.textContent=st==="error"?"Couldn't save, storage is full or blocked":"Saved on this phone";el.dataset.st=st}}
+function renderMenuSafe(){try{renderMenu()}catch(e){}}
+function persist(){
+  S.updated=Date.now();
+  try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}
+  if(AND){try{AND.saveState(JSON.stringify(S));setStatus("local")}catch(e){setStatus("error")}} else setStatus("local");
+}
+try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+const acct={name:""};
+
+// ---- helpers ----
+const toMin=t=>{const [h,m]=t.split(":").map(Number);return h*60+m};
+function fmt(t,short){let [h,m]=t.split(":").map(Number);
+  if(S.settings.clock==="24") return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+  const ap=h>=12?"PM":"AM"; h=h%12||12; return short?`${h}:${String(m).padStart(2,"0")}${ap==="PM"?"p":"a"}`:`${h}:${String(m).padStart(2,"0")} ${ap}`}
+const schedFor=d=>S.schedules.find(s=>s.days.includes(d));
+const overMem={}; // date -> {blocks}
+function dayRows(dt){const ov=overMem[dkey(dt)];return ov?sorted({blocks:ov.blocks}):sorted(schedFor(dt.getDay()))}
+const sorted=s=>s?[...s.blocks].sort((a,b)=>toMin(a.start)-toMin(b.start)):[];
+const $=id=>document.getElementById(id);
+const setCat=(el,c)=>el.style.setProperty("--cat",`var(--c-${COLORS.includes(c)?c:"gray"})`);
+function toast(msg,undo){const t=$("toast");t.textContent=msg;t.style.pointerEvents=undo?"auto":"none";
+  if(undo){const b=document.createElement("button");b.type="button";b.textContent="Undo";b.style.cssText="margin-left:12px;background:transparent;border:0;color:inherit;font-weight:800;text-decoration:underline;cursor:pointer;padding:0";b.onclick=()=>{t.hidden=true;undo()};t.appendChild(b)}
+  t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,undo?8000:2200)}
+function applyTheme(){const r=document.documentElement;const t=S.settings.theme;if(t==="light"||t==="dark") r.setAttribute("data-theme",t);else r.removeAttribute("data-theme")}
+
+// done checks — saved to your account, one record per day
+const dkey=dt=>dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");
+const doneMem={};
+function getDone(dt){const k=dkey(dt);if(!doneMem[k]){try{doneMem[k]=JSON.parse((AND?AND.getDone(k):lsGet("rn-done-"+k))||"[]")}catch(e){doneMem[k]=[]}}return doneMem[k]}
+function toggleDone(dt,id){
+  const k=dkey(dt), d=getDone(dt), i=d.indexOf(id); i>=0?d.splice(i,1):d.push(id);
+  lsSet("rn-done-"+k,JSON.stringify(d)); if(AND){try{AND.setDone(k,JSON.stringify(d))}catch(e){}} renderNow();
+}
+
+// ---- NOW ----
+function renderNow(){
+  const now=new Date(), d=now.getDay(), mins=now.getHours()*60+now.getMinutes();
+  const hello=S.settings.name?`Hi ${S.settings.name} · `:"";
+  $("date").textContent=`${hello}${DAYS[d]}, ${MONTHS[now.getMonth()]} ${now.getDate()}`;
+  $("clock").textContent=fmt(`${now.getHours()}:${now.getMinutes()}`);
+  const sch=schedFor(d), ov=overMem[dkey(now)], rows=dayRows(now), done=getDone(now), nowEl=$("now");
+  $("daytype").textContent= (sch ? sch.name : (ov?"Today":"No schedule set for today"))+(ov?" · changed for today":"");
+  const list=$("todayList"); list.innerHTML="";
+  if(!rows.length){
+    setCat(nowEl,"green"); $("nowLabel").textContent="Free day"; $("nowName").textContent="Nothing planned";
+    $("nowRange").textContent=""; $("barWrap").hidden=true; $("nowLeft").textContent="";
+    $("nowTip").textContent="Add a schedule for "+DAYS[d]+" in the Routine tab, or enjoy the day."; $("doneBtn").hidden=true;
+    $("next").hidden=true; list.innerHTML=`<div class="empty">No blocks today.</div>`; return;
+  }
+  $("barWrap").hidden=false; $("next").hidden=false;
+  let cur=rows.findIndex(r=>mins>=toMin(r.start)&&mins<toMin(r.end));
+  let block,next,s,e,m=mins;
+  if(cur>=0){block=rows[cur];next=rows[cur+1];s=toMin(block.start);e=toMin(block.end);}
+  else{
+    const before=mins<toMin(rows[0].start), after=mins>=toMin(rows[rows.length-1].end);
+    if(before||after){
+      const tom=(d+1)%7, trows=dayRows(new Date(now.getFullYear(),now.getMonth(),now.getDate()+1));
+      const wake=before?rows[0]:(trows[0]||null);
+      block={name:"Sleep",color:"indigo",start:rows[rows.length-1].end,end:wake?wake.start:"08:00",tip:before?"Sleep. Your day starts at "+fmt(rows[0].start)+".":"Sleep. Tomorrow starts at "+(wake?fmt(wake.start):"whenever you want")+".",check:false};
+      next=before?rows[0]:(wake?{...wake,name:wake.name+" ("+DAYS[tom]+")"}:null);
+      s=toMin(block.start); e=toMin(block.end); if(e<=s){e+=1440; if(m<s) m+=1440;}
+    } else {
+      const ni=rows.findIndex(r=>toMin(r.start)>mins); const prev=rows[ni-1];
+      block={name:"Open time",color:"gray",start:prev.end,end:rows[ni].start,tip:"Nothing scheduled. Rest, get ahead, or start the next thing early.",check:false};
+      next=rows[ni]; s=toMin(block.start); e=toMin(block.end);
+    }
+  }
+  setCat(nowEl,block.color);
+  $("nowLabel").textContent="Right now"; $("nowName").textContent=block.name;
+  $("nowRange").textContent=`${fmt(block.start)} – ${fmt(block.end)}`;
+  $("bar").style.width=Math.max(0,Math.min(100,(m-s)/(e-s)*100))+"%";
+  const left=e-m,h=Math.floor(left/60),mm=left%60; $("nowLeft").textContent=(h?`${h} hr ${mm} min`:`${mm} min`)+" left";
+  $("nowTip").textContent=S.settings.tips?block.tip:""; $("nowTip").hidden=!S.settings.tips||!block.tip;
+  const btn=$("doneBtn"); btn.hidden=!(block.check&&block.id);
+  if(block.id){const on=done.includes(block.id);btn.setAttribute("aria-pressed",on);btn.textContent=on?"Done ✓":"Mark done";btn.onclick=()=>toggleDone(now,block.id);}
+  $("nextName").textContent=next?next.name:"—"; $("nextTime").textContent=next?fmt(next.start):"";
+  rows.forEach((r,i)=>{
+    const el=document.createElement("div"); el.className="row"+(i===cur?" current":"")+(mins>=toMin(r.end)?" past":""); setCat(el,r.color);
+    el.innerHTML=`<span class="tm"></span><span class="dot"></span><span class="nm"></span>`;
+    el.querySelector(".tm").textContent=fmt(r.start,true); el.querySelector(".nm").textContent=r.name;
+    if(r.check){const b=document.createElement("button");b.className="chk";b.type="button";b.textContent="✓";b.setAttribute("aria-pressed",done.includes(r.id));b.setAttribute("aria-label","Mark "+r.name+" done");b.onclick=()=>toggleDone(now,r.id);el.appendChild(b);} else el.appendChild(document.createElement("span"));
+    list.appendChild(el);
+  });
+  renderProgress(rows,done,mins);
+}
+
+// ---- progress bar ----
+const INK="#2a1d05";
+function manSVG(mode){
+  // mode: walk | fight | cheer
+  const helmet = mode==="build" ? `<path d="M10 9.5c0-5 14-5 14 0z" fill="#ffc21a" stroke="${INK}" stroke-width="1.4"/><rect x="8" y="8.6" width="18" height="2.4" rx="1.2" fill="#ffc21a" stroke="${INK}" stroke-width="1.2"/>` : mode==="fight" ? `<path d="M10 9.5c0-5 14-5 14 0z" fill="#d6332a" stroke="${INK}" stroke-width="1.4"/><rect x="8" y="8.6" width="18" height="2.4" rx="1.2" fill="#d6332a" stroke="${INK}" stroke-width="1.2"/>` : "";
+  const coat = mode==="fight" ? "#e6b422" : mode==="build" ? "#ff8a1f" : "var(--c-blue)";
+  const arms = mode==="fight"
+    ? `<path d="M17 20 L8 24" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><path d="M17 21 L9 27" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><path d="M9 25.5 L-2 24" stroke="#555" stroke-width="3" stroke-linecap="round"/>
+       <circle class="drop" cx="-3" cy="24" r="1.8" fill="#4fb3ff"/><circle class="drop" cx="-3" cy="23" r="1.5" fill="#4fb3ff"/><circle class="drop" cx="-3" cy="25" r="1.6" fill="#4fb3ff"/>`
+    : mode==="build"
+    ? `<path d="M17 21 L12 29" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><g class="ham"><path d="M17 21 L27 21" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><path d="M27 21 L33 21" stroke="#8a5a2b" stroke-width="2.2" stroke-linecap="round"/><rect x="31" y="16.5" width="4.5" height="8" rx="1" fill="#777" stroke="${INK}" stroke-width="1"/></g>
+       <rect x="28" y="40" width="10" height="7" fill="#c9884a" stroke="${INK}" stroke-width="1.2"/><g class="spk"><path d="M36 37l2-3M33 36v-3M39 39l3-1" stroke="#ffb400" stroke-width="1.5" stroke-linecap="round"/></g>`
+    : mode==="cheer"
+    ? `<path d="M17 20 L9 10" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><path d="M17 20 L25 10" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`
+    : `<g class="aA"><path d="M17 20 L12 29" stroke="${INK}" stroke-width="3" stroke-linecap="round"/></g><g class="aB"><path d="M17 20 L22 29" stroke="${INK}" stroke-width="3" stroke-linecap="round"/></g>`;
+  const legs = mode==="walk"
+    ? `<g class="lA"><path d="M17 34 L13 47" stroke="${INK}" stroke-width="3.2" stroke-linecap="round"/></g><g class="lB"><path d="M17 34 L21 47" stroke="${INK}" stroke-width="3.2" stroke-linecap="round"/></g>`
+    : mode==="fight" ? `<path d="M17 34 L12 47" stroke="${INK}" stroke-width="3.2" stroke-linecap="round"/><path d="M17 34 L23 47" stroke="${INK}" stroke-width="3.2" stroke-linecap="round"/>`
+    : `<path d="M17 34 L14 47" stroke="${INK}" stroke-width="3.2" stroke-linecap="round"/><path d="M17 34 L20 47" stroke="${INK}" stroke-width="3.2" stroke-linecap="round"/>`;
+  return `<svg viewBox="0 0 34 52" aria-hidden="true"><g class="body">
+    <circle cx="17" cy="11" r="6" fill="#ffd9b0" stroke="${INK}" stroke-width="1.6"/>${helmet}
+    <circle cx="${mode==="fight"?14.5:19.5}" cy="11" r="1" fill="${INK}"/>
+    <rect x="12.5" y="17.5" width="9" height="17" rx="4" fill="${coat}" stroke="${INK}" stroke-width="1.5"/>
+    ${arms}</g>${legs}</svg>`;
+}
+const FIRE=`<svg viewBox="0 0 26 30" aria-hidden="true"><g class="flame"><path d="M13 1C15 8 23 11 22 20c-.7 6-5 9-9 9s-8.5-3-9-9C3.5 13 9 11 9 5c2 2 3 4 4 6 1-3 .5-7 0-10z" fill="#ff6a1a"/><path d="M13 12c1.5 4 5 6 4.5 10-.4 3-2.4 5-4.5 5s-4.2-2-4.5-5C8.2 18 11 16 13 12z" fill="#ffd23f"/></g></svg>`;
+const ASH=`<svg viewBox="0 0 26 30" aria-hidden="true"><ellipse cx="13" cy="27" rx="9" ry="3" fill="#5c5650"/><circle class="puff" cx="11" cy="20" r="3" fill="#9a948d"/><circle class="puff" cx="15" cy="17" r="2.4" fill="#9a948d" style="animation-delay:1.2s"/></svg>`;
+const FLAG=`<svg viewBox="0 0 14 18" aria-hidden="true"><path d="M2 1v17" stroke="var(--fg)" stroke-width="1.6"/><path d="M2.8 1.5h10l-2.6 3.5 2.6 3.5h-10z" fill="var(--cat)" stroke="var(--fg)" stroke-width=".8"/></svg>`;
+function renderProgress(rows,done,mins){
+  const tasks=rows.filter(r=>r.check);
+  const box=$("prog"); if(!tasks.length){box.hidden=true;return} box.hidden=false;
+  const st=tasks.map(t=>done.includes(t.id)?"done":(mins>=toMin(t.end)?"missed":(mins>=toMin(t.start)?"cur":"todo")));
+  const lastDone=st.lastIndexOf("done");
+  // a missed task becomes ashes once something later gets done; until then it's on fire
+  const view=st.map((x,i)=>x==="missed"?(i<lastDone?"ash":"fire"):x);
+  // the man stands after the last task that's finished or already passed
+  let pos=0; view.forEach((x,i)=>{if(x==="done"||x==="ash"||x==="fire")pos=i+1});
+  const nDone=st.filter(x=>x==="done").length, pct=Math.round(nDone/tasks.length*100);
+  const fires=view.filter(x=>x==="fire").length, imp=tasks.filter(t=>t.important), impDone=imp.filter(t=>done.includes(t.id)).length;
+  $("progPct").textContent=pct+"%";
+  $("progTxt").textContent=`${nDone}/${tasks.length}`+(imp.length?` · ★${impDone}/${imp.length}`:"");
+  $("prog").dataset.sum=`${nDone} of ${tasks.length} done`+(imp.length?`, ${impDone} of ${imp.length} milestones`:"")+(fires?`, ${fires} skipped`:"");
+  const wrap=$("trackWrap"); wrap.innerHTML="";
+  const tr=document.createElement("div"); tr.className="track";
+  tasks.forEach((t,i)=>{
+    const sg=document.createElement("div"); sg.className="seg "+view[i]; setCat(sg,t.color);
+    sg.dataset.tip=JSON.stringify({n:t.name,imp:!!t.important,a:fmt(t.start),b:fmt(t.end),st:{done:"Done",fire:"Skipped, still fixable",ash:"Skipped",cur:"Happening now",todo:"Coming up"}[view[i]]});
+    if(view[i]==="fire") sg.insertAdjacentHTML("beforeend",`<span class="fx">${FIRE}</span>`);
+    if(view[i]==="ash") sg.insertAdjacentHTML("beforeend",`<span class="fx">${ASH}</span>`);
+    if(t.important && view[i]!=="fire" && view[i]!=="ash") sg.insertAdjacentHTML("beforeend",`<span class="flag">${FLAG}</span>`);
+    tr.appendChild(sg);
+  });
+  wrap.append(tr);
+  // times: start of day, end of day, and each milestone (skipped if they'd overlap)
+  const n=tasks.length, labs=[{f:0,t:tasks[0].start,al:"start"}];
+  const endL={f:1,t:tasks[n-1].end,al:"end"};
+  let lastF=-1;
+  labs.forEach(l=>{ if(l.f-lastF<0.24 && lastF>=0) return; if(1-l.f<0.24 && l.al!=="start") return; lastF=l.f; addLab(l) });
+  addLab(endL);
+  function addLab(l){const e=document.createElement("span");e.className="tlab"+(l.imp?" imp":"");e.textContent=(l.imp?"★":"")+fmt(l.t,true);
+    if(l.al==="start") e.style.left="0"; else if(l.al==="end") e.style.right="0"; else {e.style.left=(l.f*100)+"%";e.style.transform="translateX(-50%)"}
+    wrap.appendChild(e)}
+  const fighting = pos>0 && view[pos-1]==="fire";
+  const curI = view.indexOf("cur");
+  const mode = nDone===tasks.length ? "cheer" : fighting ? "fight" : curI>=0 ? "build" : "walk";
+  const man=document.createElement("div"); man.className="man "+mode;
+  // standing spot: the boundary between segments, nudged right of a fire so he sprays it
+  const frac = mode==="build" ? (curI+0.35)/tasks.length : tasks.length ? pos/tasks.length : 0;
+  man.style.left=`calc(${frac*100}% ${fighting?"+ 10px":""})`;
+  if(mode!=="build"){ if(pos===0) man.style.left="8px"; if(pos>=tasks.length && !fighting) man.style.left="calc(100% - 8px)"; }
+  man.innerHTML=manSVG(mode);
+  man.setAttribute("role","img"); man.setAttribute("aria-label", mode==="cheer"?"Everything done":fighting?"Putting out a skipped task":mode==="build"?"Working on the current task":"Walking toward the next task");
+  wrap.appendChild(man);
+}
+
+// press-and-hold or hover a piece of the bar to see its times
+(function(){
+  const wrap=document.getElementById("trackWrap"), pop=document.getElementById("tipPop");
+  let active=false, peek=null;
+  function segAt(x,y){const el=document.elementFromPoint(x,y);if(el&&el.closest){const sg=el.closest(".seg");if(sg&&wrap.contains(sg))return sg}
+    // fall back to the nearest piece by x (finger slightly above/below the bar)
+    const segs=[...wrap.querySelectorAll(".seg")];let best=null,bd=1e9;segs.forEach(sg=>{const r=sg.getBoundingClientRect();const d=Math.abs(x-(r.left+r.width/2));if(d<bd){bd=d;best=sg}});return best}
+  function show(x,y){const sg=segAt(x,y);if(!sg){hide();return}
+    if(peek!==sg){if(peek)peek.classList.remove("peek");peek=sg;sg.classList.add("peek");
+      const d=JSON.parse(sg.dataset.tip);pop.innerHTML="";const b=document.createElement("b");b.textContent=(d.imp?"★ ":"")+d.n;const t=document.createElement("span");t.textContent=`${d.a} – ${d.b} · ${d.st}`;pop.append(b,t)}
+    pop.hidden=false;const r=sg.getBoundingClientRect(),w=pop.offsetWidth,h=pop.offsetHeight;
+    let left=r.left+r.width/2-w/2;left=Math.max(8,Math.min(window.innerWidth-w-8,left));
+    let top=r.bottom+10; pop.style.left=left+"px";pop.style.top=top+"px"}
+  function hide(){active=false;pop.hidden=true;if(peek){peek.classList.remove("peek");peek=null}}
+  wrap.addEventListener("pointerdown",e=>{active=true;try{wrap.setPointerCapture(e.pointerId)}catch(_){}show(e.clientX,e.clientY);e.preventDefault()});
+  wrap.addEventListener("pointermove",e=>{if(active||e.pointerType==="mouse")show(e.clientX,e.clientY)});
+  ["pointerup","pointercancel"].forEach(t=>wrap.addEventListener(t,e=>{if(e.pointerType==="mouse"){active=false}else hide()}));
+  wrap.addEventListener("pointerleave",e=>{if(e.pointerType==="mouse")hide()});
+  wrap.addEventListener("contextmenu",e=>e.preventDefault());
+  window.addEventListener("scroll",()=>{if(!pop.hidden&&!active)hide()},{passive:true});
+})();
+
+// ---- ROUTINE ----
+let selId=null;
+function sel(){let s=S.schedules.find(x=>x.id===selId);if(!s){s=S.schedules[0];selId=s&&s.id}return s}
+function renderRoutine(){
+  const chips=$("schedChips"); chips.innerHTML="";
+  const s=sel();
+  S.schedules.forEach(x=>{const c=document.createElement("button");c.type="button";c.className="chip";c.textContent=x.name||"Untitled";c.setAttribute("aria-pressed",x.id===selId);c.onclick=()=>{selId=x.id;renderRoutine()};chips.appendChild(c)});
+  const has=!!s; $("schedName").disabled=!has; $("delSched").disabled=!has; $("dupSched").disabled=!has; $("addBlock").disabled=!has;
+  if(!has){$("schedDays").innerHTML="";$("blockList").innerHTML=`<div class="empty">No schedules yet. Tap “New schedule” to start.</div>`;$("dayNote").textContent="";return}
+  if(document.activeElement!==$("schedName")) $("schedName").value=s.name;
+  const days=$("schedDays"); days.innerHTML="";
+  DAY1.forEach((l,i)=>{const b=document.createElement("button");b.type="button";b.className="day";b.textContent=l;b.setAttribute("aria-label",DAYS[i]);b.setAttribute("aria-pressed",s.days.includes(i));
+    b.onclick=()=>{if(s.days.includes(i)) s.days=s.days.filter(x=>x!==i); else {S.schedules.forEach(o=>o.days=o.days.filter(x=>x!==i)); s.days.push(i);} persist(); renderAll();};days.appendChild(b)});
+  const unused=[0,1,2,3,4,5,6].filter(i=>!S.schedules.some(o=>o.days.includes(i)));
+  $("dayNote").textContent= unused.length ? "No schedule on: "+unused.map(i=>DAYS[i]).join(", ")+"." : "Each day can only use one schedule. Picking a day here moves it from any other schedule.";
+  const list=$("blockList"); list.innerHTML="";
+  const rows=sorted(s);
+  if(!rows.length){list.innerHTML=`<div class="empty">No blocks yet. Tap “Add block”.</div>`;return}
+  rows.forEach((r,i)=>{
+    if(i>0&&toMin(r.start)>toMin(rows[i-1].end)){const g=document.createElement("div");g.className="gap";g.textContent=`open ${fmt(rows[i-1].end,true)}–${fmt(r.start,true)}`;list.appendChild(g)}
+    const el=document.createElement("button");el.type="button";el.className="row editable";el.style.cssText="appearance:none;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;width:100%";setCat(el,r.color);
+    el.innerHTML=`<span class="tm"></span><span class="dot"></span><span class="nm"></span><span class="meta"></span>`;
+    el.querySelector(".tm").textContent=fmt(r.start,true)+"–"+fmt(r.end,true); el.querySelector(".nm").textContent=r.name; el.querySelector(".meta").textContent=[r.important?"★":"",r.alert?"alert":""].filter(Boolean).join(" · ");
+    el.setAttribute("aria-label",`Edit ${r.name}, ${fmt(r.start)} to ${fmt(r.end)}`);
+    el.onclick=()=>openSheet(s,r);
+    list.appendChild(el);
+  });
+  if(list.firstChild) list.firstChild.style.borderTop="0";
+}
+$("schedName").addEventListener("input",e=>{const s=sel();if(!s)return;s.name=e.target.value;persist();
+  [...$("schedChips").children].forEach(c=>{if(c.getAttribute("aria-pressed")==="true")c.textContent=s.name||"Untitled"});renderNow()});
+$("addSched").onclick=()=>{const s={id:uid(),name:"New schedule",days:[],blocks:[]};S.schedules.push(s);selId=s.id;persist();renderAll();$("schedName").focus();$("schedName").select()};
+$("dupSched").onclick=()=>{const s=sel();const c=JSON.parse(JSON.stringify(s));c.id=uid();c.name=s.name+" copy";c.days=[];c.blocks.forEach(b=>b.id=uid());S.schedules.push(c);selId=c.id;persist();renderAll();toast("Copied. Pick days for it.")};
+let armDel=false;
+$("delSched").onclick=()=>{const btn=$("delSched");if(!armDel){armDel=true;btn.textContent="Tap again to delete";setTimeout(()=>{armDel=false;btn.textContent="Delete schedule"},3000);return}
+  armDel=false;btn.textContent="Delete schedule";const gone=S.schedules.find(x=>x.id===selId), at=S.schedules.indexOf(gone);S.schedules=S.schedules.filter(x=>x.id!==selId);selId=null;persist();renderAll();
+  toast(`Deleted "${gone.name||"Untitled"}"`,()=>{S.schedules.forEach(o=>o.days=o.days.filter(d=>!gone.days.includes(d)));S.schedules.splice(Math.max(0,at),0,gone);selId=gone.id;persist();renderAll();toast("Schedule restored")})};
+$("addBlock").onclick=()=>{const s=sel();const rows=sorted(s);const st=rows.length?rows[rows.length-1].end:"08:00";const m=Math.min(toMin(st)+30,1439);
+  openSheet(s,{id:null,name:"",start:st,end:`${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`,color:"teal",tip:"",alert:false,check:true})};
+
+// sheet
+let editing=null, pickColor="teal", lastFocus=null;
+function openSheet(s,b){
+  editing={s,b}; lastFocus=document.activeElement;
+  $("sheetTitle").textContent=b.id?"Edit block":"New block";
+  $("bName").value=b.name; $("bStart").value=b.start; $("bEnd").value=b.end; $("bTip").value=b.tip||"";
+  $("bAlert").checked=!!b.alert; $("bCheck").checked=b.check!==false; $("bImp").checked=!!b.important; $("bErr").hidden=true; $("bDelete").hidden=!b.id;
+  pickColor=b.color; drawSwatches(); $("scrim").hidden=false; setTimeout(()=>$("bName").focus(),30);
+}
+function drawSwatches(){const w=$("bColors");w.innerHTML="";COLORS.forEach(c=>{const x=document.createElement("button");x.type="button";x.className="sw";setCat(x,c);x.setAttribute("aria-label",c);x.setAttribute("aria-pressed",c===pickColor);x.onclick=()=>{pickColor=c;drawSwatches()};w.appendChild(x)})}
+function closeSheet(){$("scrim").hidden=true;editing=null;if(lastFocus)try{lastFocus.focus()}catch(e){}}
+$("bCancel").onclick=closeSheet;
+$("scrim").addEventListener("click",e=>{if(e.target.id==="scrim")closeSheet()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("scrim").hidden)closeSheet()});
+$("bSave").onclick=()=>{
+  const name=$("bName").value.trim(), st=$("bStart").value, en=$("bEnd").value, err=$("bErr");
+  if(!name){err.textContent="Give the block a name.";err.hidden=false;return}
+  if(!st||!en){err.textContent="Pick a start and end time.";err.hidden=false;return}
+  if(toMin(en)<=toMin(st)){err.textContent="The end time has to be after the start time. Blocks can't go past midnight.";err.hidden=false;return}
+  const {s,b}=editing;
+  const clash=s.blocks.find(o=>o.id!==b.id&&toMin(st)<toMin(o.end)&&toMin(en)>toMin(o.start));
+  if(clash){err.textContent=`That overlaps “${clash.name}” (${fmt(clash.start)}–${fmt(clash.end)}). Change one of them.`;err.hidden=false;return}
+  const nb={id:b.id||uid(),name,start:st,end:en,color:pickColor,tip:$("bTip").value.trim(),alert:$("bAlert").checked,check:$("bCheck").checked,important:$("bImp").checked};
+  if(b.id) s.blocks=s.blocks.map(o=>o.id===b.id?nb:o); else s.blocks.push(nb);
+  persist(); closeSheet(); renderAll(); toast(b.id?"Saved":"Block added");
+};
+$("bDelete").onclick=()=>{const {s,b}=editing;const btn=$("bDelete");if(btn.dataset.arm!=="1"){btn.dataset.arm="1";btn.textContent="Tap again";setTimeout(()=>{btn.dataset.arm="";btn.textContent="Delete"},3000);return}
+  btn.dataset.arm="";btn.textContent="Delete";s.blocks=s.blocks.filter(o=>o.id!==b.id);persist();closeSheet();renderAll();toast("Block deleted")};
+
+// ---- MENU ----
+function renderMenu(){
+  const nm=S.settings.name||"R";
+  $("avatar").textContent=(nm.trim()[0]||"?").toUpperCase();
+  if(document.activeElement!==$("setName")) $("setName").value=S.settings.name||"";
+  $("setClock").value=S.settings.clock; $("setTheme").value=S.settings.theme; $("setTips").checked=S.settings.tips!==false;
+  const n=S.schedules.filter(s=>s.days.length).reduce((a,s)=>a+s.blocks.filter(b=>b.alert).length,0);
+  $("alertCount").textContent=`You have alerts turned on for ${n} block${n===1?"":"s"} across your schedules.`;
+}
+$("setName").addEventListener("input",e=>{S.settings.name=e.target.value.trim();persist();renderNow();renderMenu()});
+$("setClock").onchange=e=>{S.settings.clock=e.target.value;persist();renderAll()};
+$("setTheme").onchange=e=>{S.settings.theme=e.target.value;applyTheme();persist()};
+$("setTips").onchange=e=>{S.settings.tips=e.target.checked;persist();renderNow()};
+let armReset=false;
+$("resetBtn").onclick=()=>{const b=$("resetBtn");if(!armReset){armReset=true;b.textContent="Tap again to reset everything";setTimeout(()=>{armReset=false;b.textContent="Reset to starter routine"},3000);return}
+  armReset=false;b.textContent="Reset to starter routine";const keep=S.settings;S=starter();S.settings=keep;selId=null;persist();renderAll();toast("Routine reset")};
+function saveFile(name,text,type){
+  if(AND){AND.saveFile(name,text,type);return;}
+  const blob=new Blob([text],{type}); const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+$("backupBtn").onclick=()=>{
+  const dt=new Date(); saveFile(`right-now-backup-${dkey(dt)}.json`,JSON.stringify(S,null,2),"application/json");
+  $("dataNote").textContent="Backup made. Keep it in Files, iCloud Drive or email it to yourself.";
+};
+$("importFile").onchange=e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ const p=JSON.parse(r.result); const x=p&&p.json?JSON.parse(p.json):p;
+      if(!valid(x)) throw 0; S=x; persist(); selId=null; applyTheme(); renderAll(); toast("Backup loaded"); $("dataNote").textContent="";
+    }catch(err){ $("dataNote").textContent="That file isn't a Right Now backup. Pick the .json file you saved from this app."; }
+    e.target.value=""; };
+  r.readAsText(f);
+};
+// calendar file with alerts, built from your routine
+$("icsBtn").onclick=()=>{
+  const pad=n=>String(n).padStart(2,"0"), CODES=["SU","MO","TU","WE","TH","FR","SA"];
+  const esc=t=>String(t||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n");
+  const now=new Date(), stamp=now.toISOString().replace(/[-:]/g,"").slice(0,15)+"Z";
+  const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Right Now//Offline//EN","CALSCALE:GREGORIAN","X-WR-CALNAME:Routine",
+    "BEGIN:VTIMEZONE","TZID:America/New_York","BEGIN:DAYLIGHT","TZOFFSETFROM:-0500","TZOFFSETTO:-0400","TZNAME:EDT","DTSTART:19700308T020000","RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU","END:DAYLIGHT",
+    "BEGIN:STANDARD","TZOFFSETFROM:-0400","TZOFFSETTO:-0500","TZNAME:EST","DTSTART:19701101T020000","RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU","END:STANDARD","END:VTIMEZONE"];
+  let n=0;
+  S.schedules.forEach(sc=>{ if(!sc.days.length) return;
+    const first=[...sc.days].map(d=>{const t=new Date(now.getFullYear(),now.getMonth(),now.getDate());t.setDate(t.getDate()+((d-t.getDay()+7)%7));return t}).sort((a,b)=>a-b)[0];
+    const ds=`${first.getFullYear()}${pad(first.getMonth()+1)}${pad(first.getDate())}`;
+    sc.blocks.forEach(b=>{ n++;
+      L.push("BEGIN:VEVENT",`UID:rn-${b.id}-${n}@rightnow`,`DTSTAMP:${stamp}`,
+        `DTSTART;TZID=America/New_York:${ds}T${b.start.replace(":","")}00`,`DTEND;TZID=America/New_York:${ds}T${b.end.replace(":","")}00`,
+        `RRULE:FREQ=WEEKLY;BYDAY=${sc.days.map(d=>CODES[d]).join(",")}`,`SUMMARY:${esc(b.name)}`);
+      if(b.tip) L.push(`DESCRIPTION:${esc(b.tip)}`);
+      if(b.alert) L.push("BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:${esc(b.name)}`,"TRIGGER:-PT0M","END:VALARM");
+      L.push("END:VEVENT"); });
+  });
+  L.push("END:VCALENDAR");
+  if(!n){ toast("Add blocks and pick days first"); return; }
+  saveFile("Routine.ics",L.join("\r\n")+"\r\n","text/calendar");
+  toast("Calendar file made");
+};
+
+// ---- tabs ----
+function show(v){["now","routine","menu"].forEach(x=>{$("v-"+x).hidden=x!==v});
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t.dataset.v===v));
+  try{sessionStorage.setItem("rn-tab",v)}catch(e){} window.scrollTo(0,0)}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>show(t.dataset.v));
+function renderAll(){renderNow();renderRoutine();renderMenu()}
+applyTheme(); renderAll();
+try{const t=sessionStorage.getItem("rn-tab");if(t)show(t)}catch(e){}
+setStatus("local");
+if(AND){
+  const p=$("icsBtn").closest(".panel");
+  p.innerHTML=`<p class="note">Any block with <b>Alert</b> turned on sends a notification when it starts. Change alerts in the Routine tab.</p>
+    <div class="actions"><button class="btn small" type="button" id="testNotif">Send a test notification</button>
+    <button class="btn small ghost" type="button" id="notifSettings">Notification settings</button></div>
+    <p class="note"><b>Widget:</b> long-press your home screen, tap <b>Widgets</b>, find <b>Right Now</b> and drag it onto your screen.</p>
+    <p class="note" id="notifWarn" hidden></p>
+    <p class="note" id="alertCount"></p>`;
+  $("testNotif").onclick=()=>{AND.testNotification();toast("Test sent")};
+  $("notifSettings").onclick=()=>AND.openNotificationSettings();
+  const warn=()=>{const w=$("notifWarn");let ok=true;try{ok=AND.notificationsAllowed()}catch(e){}
+    w.hidden=ok;w.textContent="Notifications are turned off for Right Now. Tap Notification settings and turn them on.";};
+  warn(); renderMenu();
+  window.rnRefresh=()=>{Object.keys(doneMem).forEach(k=>delete doneMem[k]);const p2=phoneState();if(p2)S=p2;applyTheme();renderAll();warn();};
+}
+window.rnBack=()=>{
+  if(!$("scrim").hidden){closeSheet();return true}
+  if($("v-now").hidden){show("now");return true}
+  return false;
+};
+setInterval(renderNow,30000);
+
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)renderNow()});
+</script>
+</body>
+</html>
