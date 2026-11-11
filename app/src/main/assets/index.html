@@ -117,6 +117,7 @@ header{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) auto;al
 .puff{animation:smoke 2.4s ease-out infinite}
 .cheer .body{animation:cheer .6s ease-in-out infinite}
 @media (prefers-reduced-motion: reduce){.man{transition:none}.walk .lA,.walk .lB,.walk .aA,.walk .aB,.walk .body,.flame,.drop,.puff,.cheer .body,.build .ham,.build .spk{animation:none}}
+.upd{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:14px;background:color-mix(in srgb,var(--c-blue) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--c-blue) 40%,var(--line));font-size:.9rem}
 .sub{color:var(--muted);font-size:.85rem}
 h1.screen{margin:0;font-family:var(--f-display);font-weight:800;font-size:2rem;letter-spacing:-.01em}
 h2{font-family:var(--f-display);font-weight:700;font-size:1.1rem;margin:6px 4px 0}
@@ -237,6 +238,7 @@ textarea{resize:vertical;min-height:70px}
       <div class="next" id="next">
         <span class="k">Next</span><span class="v" id="nextName"></span><span class="t" id="nextTime"></span>
       </div>
+      <div class="upd" id="updBanner" hidden><span id="updText">A new version of Right Now is ready.</span><button class="btn small" type="button" id="updBtn">Update</button></div>
       <h2>Today</h2>
       <div class="list" id="todayList"></div>
     </div>
@@ -313,7 +315,7 @@ textarea{resize:vertical;min-height:70px}
       <h2>About</h2>
       <div class="list">
         <div class="menu-row"><span>App</span><span class="v">Right Now</span></div>
-        <div class="menu-row"><span>Version</span><span class="v">1.3 Android</span></div>
+        <div class="menu-row"><span>Version</span><span class="v" id="verText">1.3 Android</span></div>
         <div class="menu-row"><span>What it does</span><span class="v">Tells you what to do right now</span></div>
         <div class="menu-row"><span>Install</span><span class="v">Safari → Share → Add to Home Screen</span></div>
         <div class="menu-row"><span>Built with</span><span class="v">Claude, for David</span></div>
@@ -752,6 +754,23 @@ if(AND){
     w.hidden=ok;w.textContent="Notifications are turned off for Right Now. Tap Notification settings and turn them on.";};
   warn(); renderMenu();
   window.rnRefresh=()=>{Object.keys(doneMem).forEach(k=>delete doneMem[k]);const p2=phoneState();if(p2)S=p2;applyTheme();renderAll();warn();};
+}
+if(AND){
+  try{$("verText").textContent="Android build "+AND.appVersion()}catch(e){}
+  const dp=$("dataNote").closest(".panel");
+  const up=document.createElement("div");up.className="panel";
+  up.innerHTML=`<p class="note" id="updMenuText">Right Now checks for a new version each time you open it.</p>
+    <div class="actions"><button class="btn small ghost" type="button" id="updCheck">Check for updates</button><button class="btn small" type="button" id="updMenuBtn" hidden>Update</button></div>`;
+  const h=document.createElement("h2");h.textContent="Updates";
+  dp.after(up);dp.after(h);
+  $("updCheck").onclick=()=>{$("updMenuText").textContent="Checking…";AND.checkUpdate()};
+  $("updBtn").onclick=()=>AND.installUpdate();
+  $("updMenuBtn").onclick=()=>AND.installUpdate();
+  window.rnUpdateStatus=(msg,ready)=>{
+    $("updMenuText").textContent=msg; $("updText").textContent=msg;
+    if(ready){$("updBanner").hidden=false;$("updMenuBtn").hidden=false}
+    else if(/newest/.test(msg)){$("updBanner").hidden=true;$("updMenuBtn").hidden=true}
+  };
 }
 window.rnBack=()=>{
   if(!$("scrim").hidden){closeSheet();return true}

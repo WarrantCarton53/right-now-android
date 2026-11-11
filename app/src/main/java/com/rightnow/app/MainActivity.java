@@ -70,6 +70,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        autoCheck();
         if (web != null) web.evaluateJavascript("window.rnRefresh&&rnRefresh()", null);
         Scheduler.refresh(this);
     }
@@ -100,12 +101,53 @@ public class MainActivity extends Activity {
         }
     }
 
+    private long lastCheck = 0;
+    private String updateUrl = null;
+
+    /** Look for a new version when the app opens (at most once an hour). */
+    private void autoCheck() {
+        long now = System.currentTimeMillis();
+        if (now - lastCheck < 3600_000L) return;
+        lastCheck = now;
+        runCheck(false);
+    }
+
+    private void runCheck(boolean manual) {
+        long mine = Updater.installedVersion(this);
+        Updater.check((latest, url, err) -> runOnUiThread(() -> {
+            if (web == null) return;
+            String js;
+            if (err != null) js = manual ? "window.rnUpdateStatus&&rnUpdateStatus(" + JSONq(err) + ",false)" : "";
+            else if (latest > mine) { updateUrl = url; js = "window.rnUpdateStatus&&rnUpdateStatus(" + JSONq("Version " + latest + " is ready (you have " + mine + ").") + ",true)"; }
+            else js = manual ? "window.rnUpdateStatus&&rnUpdateStatus(" + JSONq("You have the newest version (" + mine + ").") + ",false)" : "";
+            if (!js.isEmpty()) web.evaluateJavascript(js, null);
+        }));
+    }
+
+    private static String JSONq(String s) { return org.json.JSONObject.quote(s); }
+
     /** What the Right Now page can ask the phone to do. */
     class Bridge {
         @JavascriptInterface public String getState() { return Store.getState(MainActivity.this); }
         @JavascriptInterface public void saveState(String json) {
             Store.saveState(MainActivity.this, json);
             Scheduler.refresh(MainActivity.this);
+        }
+        @JavascriptInterface public void checkUpdate() { runOnUiThread(() -> runCheck(true)); }
+        @JavascriptInterface public String appVersion() { return String.valueOf(Updater.installedVersion(MainActivity.this)); }
+        @JavascriptInterface public void installUpdate() {
+            runOnUiThread(() -> {
+                if (updateUrl == null) { runCheck(true); return; }
+                if (Updater.needsPermission(MainActivity.this)) {
+                    web.evaluateJavascript("window.rnUpdateStatus&&rnUpdateStatus(" + JSONq("Turn on \"Allow from this source\" for Right Now, then come back and tap Update again.") + ",true)", null);
+                    Updater.openPermission(MainActivity.this);
+                    return;
+                }
+                web.evaluateJavascript("window.rnUpdateStatus&&rnUpdateStatus(" + JSONq("Downloading the update…") + ",false)", null);
+                Updater.install(MainActivity.this, updateUrl, (a, b, err) -> runOnUiThread(() -> {
+                    if (err != null) web.evaluateJavascript("window.rnUpdateStatus&&rnUpdateStatus(" + JSONq(err) + ",true)", null);
+                }));
+            });
         }
         @JavascriptInterface public String getDone(String day) { return Store.getDone(MainActivity.this, day); }
         @JavascriptInterface public void setDone(String day, String json) {
